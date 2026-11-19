@@ -49,6 +49,7 @@ const CSV_COLUMNS = [
   { label: 'model', get: (m) => m.model },
   { label: 'api_base', get: (m) => m.api_base },
   { label: 'host', get: (m) => m.host },
+  { label: 'host_ip', get: (m) => m.host_ip },
   { label: 'port', get: (m) => m.port },
   { label: 'tier', get: (m) => m.tier },
   { label: 'mode', get: (m) => m.mode },
@@ -143,6 +144,7 @@ export function Infrastructure() {
         {
           key,
           host: m.host || null,
+          hostIp: m.host_ip || null,
           port: m.port || null,
           apiBase: m.api_base || null,
           providers: new Set(),
@@ -231,7 +233,12 @@ export function Infrastructure() {
       <Banner type={banner?.type} message={banner?.message} onDismiss={() => setBanner(null)} />
 
       {/* Header actions */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          <code className="font-mono">host.docker.internal</code> is Docker's alias for the
+          machine hosting the gateway; the IP in parentheses is where it actually routes.
+        </p>
+        <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -260,6 +267,7 @@ export function Infrastructure() {
           <Plus className="h-4 w-4" />
           Add model
         </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -293,6 +301,11 @@ export function Infrastructure() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <CardTitle className="font-mono text-sm">{s.key}</CardTitle>
+                        {s.hostIp && (
+                          <p className="font-mono text-xs text-muted-foreground">
+                            ({s.hostIp})
+                          </p>
+                        )}
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {[...s.providers].join(', ')}
                         </p>
@@ -394,7 +407,12 @@ export function Infrastructure() {
                           {m.provider || '—'}
                         </TableCell>
                         <TableCell className="max-w-[220px] truncate font-mono text-xs text-muted-foreground">
-                          {serverKey(m)}
+                          <div className="truncate">{serverKey(m)}</div>
+                          {m.host_ip && (
+                            <div className="truncate text-[11px] text-muted-foreground/70">
+                              ({m.host_ip})
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={tierVariant(m.tier)}>{m.tier || 'other'}</Badge>

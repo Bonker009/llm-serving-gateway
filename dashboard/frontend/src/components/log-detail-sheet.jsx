@@ -127,6 +127,15 @@ export function LogDetailSheet({ row, open, onOpenChange }) {
                 {row.api_base || '—'}
               </Field>
 
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Caller IP" mono>
+                  {row.client_ip || '—'}
+                </Field>
+                <Field label="Backend IP" mono>
+                  {row.backend_ip || '—'}
+                </Field>
+              </div>
+
               {extractErrorMessage(row) && (
                 <div className="rounded-md border border-critical/40 bg-critical/10 p-3">
                   <p className="text-[11px] font-medium uppercase tracking-wide text-critical">

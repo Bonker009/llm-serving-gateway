@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import socket
 import time
 from urllib.parse import urlsplit
 
@@ -124,6 +125,38 @@ def _tier_for_port(port: str | None) -> str:
     return "other"
 
 
+_IP_CACHE: dict[str, str | None] = {}
+
+
+def _resolve_ip(host: str | None) -> str | None:
+    """Resolve a backend hostname to an IP (e.g. host.docker.internal -> 192.168.x.x).
+
+    Cached per host. `host.docker.internal` is Docker's alias for the machine hosting
+    the containers — resolving it shows the real address the gateway dials.
+    """
+    if not host:
+        return None
+    if host in _IP_CACHE:
+        return _IP_CACHE[host]
+    try:
+        ip = socket.gethostbyname(host)
+    except (socket.gaierror, OSError):
+        ip = None
+    _IP_CACHE[host] = ip
+    return ip
+
+
+def _client_ip(meta: dict) -> str | None:
+    """Best-effort extraction of the requester's IP from a spend-log row's metadata."""
+    if not isinstance(meta, dict):
+        return None
+    for k in ("requester_ip_address", "requester_ip", "client_ip", "ip_address"):
+        v = meta.get(k)
+        if v:
+            return str(v)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Data endpoints (normalized for the frontend)
 # ---------------------------------------------------------------------------
@@ -197,6 +230,8 @@ async def api_logs(
                 "end_user": r.get("end_user"),
                 "cache_hit": r.get("cache_hit"),
                 "api_base": r.get("api_base"),
+                "backend_ip": _resolve_ip(_host_port(r.get("api_base"))[0]),
+                "client_ip": _client_ip(meta),
                 "status": r.get("status") or "success",
                 "prompt_tokens": r.get("prompt_tokens"),
                 "completion_tokens": r.get("completion_tokens"),
@@ -238,6 +273,7 @@ async def api_models(_: str = Depends(require_admin)):
                 "model": raw_model,
                 "api_base": api_base,
                 "host": host,
+                "host_ip": _resolve_ip(host),
                 "port": port,
                 "tier": _tier_for_port(port),
                 "mode": info.get("mode"),

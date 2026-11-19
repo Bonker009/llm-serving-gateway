@@ -32,6 +32,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
 import { LogDetailSheet } from '@/components/log-detail-sheet'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { isSuccess } from '@/lib/analytics'
 import {
   formatMs,
@@ -56,12 +57,36 @@ const CSV_COLUMNS = [
   { label: 'end_user', get: (r) => r.end_user },
   { label: 'cache_hit', get: (r) => r.cache_hit },
   { label: 'api_base', get: (r) => r.api_base },
+  { label: 'client_ip', get: (r) => r.client_ip },
+  { label: 'backend_ip', get: (r) => r.backend_ip },
   { label: 'status', get: (r) => r.status },
   { label: 'prompt_tokens', get: (r) => r.prompt_tokens },
   { label: 'completion_tokens', get: (r) => r.completion_tokens },
   { label: 'total_tokens', get: (r) => r.total_tokens },
   { label: 'metadata', get: (r) => r.metadata },
 ]
+
+function IpCell({ row }) {
+  if (row.client_ip) {
+    return <span className="font-mono text-xs text-foreground">{row.client_ip}</span>
+  }
+  if (row.backend_ip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
+            {row.backend_ip}
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+              backend
+            </span>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Caller IP unavailable — showing backend IP instead.</TooltipContent>
+      </Tooltip>
+    )
+  }
+  return <span className="font-mono text-xs text-muted-foreground">—</span>
+}
 
 function uniqueSorted(values) {
   return [...new Set(values.filter((v) => v != null && v !== ''))].sort()
@@ -324,6 +349,7 @@ export function Logs() {
                 <TableHead>Type</TableHead>
                 <TableHead>Team</TableHead>
                 <TableHead>Key</TableHead>
+                <TableHead>IP</TableHead>
                 <SortHeader
                   label="Latency"
                   field="latency_ms"
@@ -346,7 +372,7 @@ export function Logs() {
               {loading ? (
                 Array.from({ length: 10 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 10 }).map((_, j) => (
+                    {Array.from({ length: 11 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
@@ -355,7 +381,7 @@ export function Logs() {
                 ))
               ) : pageRows.length === 0 ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={10}>
+                  <TableCell colSpan={11}>
                     <EmptyState
                       icon={ScrollText}
                       title={
@@ -406,6 +432,9 @@ export function Logs() {
                       </TableCell>
                       <TableCell className="max-w-[120px] truncate text-xs text-muted-foreground">
                         {r.key_alias || '—'}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <IpCell row={r} />
                       </TableCell>
                       <TableCell className="tabular whitespace-nowrap text-right font-mono text-xs">
                         {formatMs(r.latency_ms)}

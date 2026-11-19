@@ -103,6 +103,9 @@ export function ModelDetailSheet({ model, open, onOpenChange, onEdit, onDelete }
 
               <Field label="Backend / API base" mono>
                 {model.api_base || (model.host ? `${model.host}:${model.port || ''}` : '—')}
+                {model.host_ip && (
+                  <span className="ml-1 text-muted-foreground">({model.host_ip})</span>
+                )}
               </Field>
 
               <div>

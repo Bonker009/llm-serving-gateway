@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ChevronRight, ChevronDown } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -30,9 +30,17 @@ export function KeyFormSheet({ open, onOpenChange, keyRow, onCreated, onUpdated,
   const editing = Boolean(keyRow)
   const [form, setForm] = React.useState(EMPTY)
   const [saving, setSaving] = React.useState(false)
+  const [showAdvanced, setShowAdvanced] = React.useState(false)
 
   React.useEffect(() => {
     if (open) {
+      const hasOverride = Boolean(
+        keyRow &&
+          ((keyRow.models && keyRow.models.length) ||
+            keyRow.rpm_limit != null ||
+            keyRow.tpm_limit != null)
+      )
+      setShowAdvanced(hasOverride)
       setForm(
         keyRow
           ? {
@@ -46,6 +54,18 @@ export function KeyFormSheet({ open, onOpenChange, keyRow, onCreated, onUpdated,
       )
     }
   }, [open, keyRow])
+
+  // The team supplies the default model access + rate limits a key inherits.
+  const team = teams.find((t) => String(t.team_id) === form.team_id)
+  const inheritHint = () => {
+    if (form.team_id === NO_TEAM) return 'No team — the key has no inherited access.'
+    if (!team) return null
+    const models = team.models && team.models.length ? `${team.models.length} model(s)` : 'all models'
+    const rpm = team.rpm_limit != null ? `${team.rpm_limit} rpm` : null
+    const tpm = team.tpm_limit != null ? `${team.tpm_limit} tpm` : null
+    const limits = [rpm, tpm].filter(Boolean).join(' · ')
+    return `Inherits ${models}${limits ? ` and ${limits}` : ' and the team’s limits'}.`
+  }
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -120,46 +140,73 @@ export function KeyFormSheet({ open, onOpenChange, keyRow, onCreated, onUpdated,
                 ))}
               </SelectContent>
             </Select>
+            {inheritHint() && (
+              <p className="text-xs text-muted-foreground">{inheritHint()}</p>
+            )}
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="key-models">
-              Models
-            </label>
-            <ModelsMultiSelect
-              id="key-models"
-              value={form.models}
-              onChange={(models) => setForm((f) => ({ ...f, models }))}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground" htmlFor="key-rpm">
-                RPM limit
-              </label>
-              <Input
-                id="key-rpm"
-                type="number"
-                min={0}
-                value={form.rpm_limit}
-                onChange={(e) => setForm((f) => ({ ...f, rpm_limit: e.target.value }))}
-                placeholder="Unlimited"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground" htmlFor="key-tpm">
-                TPM limit
-              </label>
-              <Input
-                id="key-tpm"
-                type="number"
-                min={0}
-                value={form.tpm_limit}
-                onChange={(e) => setForm((f) => ({ ...f, tpm_limit: e.target.value }))}
-                placeholder="Unlimited"
-              />
-            </div>
+          {/* A key normally just inherits its team's models + limits. These are
+              optional per-key overrides, kept out of the way by default. */}
+          <div className="rounded-lg border border-border">
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+              onClick={() => setShowAdvanced((s) => !s)}
+              aria-expanded={showAdvanced}
+            >
+              {showAdvanced ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+              Advanced override (optional)
+            </button>
+            {showAdvanced && (
+              <div className="space-y-4 border-t border-border p-3">
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to inherit from the team. Set these only to restrict this
+                  key below the team’s access.
+                </p>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground" htmlFor="key-models">
+                    Models override
+                  </label>
+                  <ModelsMultiSelect
+                    id="key-models"
+                    value={form.models}
+                    onChange={(models) => setForm((f) => ({ ...f, models }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground" htmlFor="key-rpm">
+                      RPM limit
+                    </label>
+                    <Input
+                      id="key-rpm"
+                      type="number"
+                      min={0}
+                      value={form.rpm_limit}
+                      onChange={(e) => setForm((f) => ({ ...f, rpm_limit: e.target.value }))}
+                      placeholder="Inherit"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground" htmlFor="key-tpm">
+                      TPM limit
+                    </label>
+                    <Input
+                      id="key-tpm"
+                      type="number"
+                      min={0}
+                      value={form.tpm_limit}
+                      onChange={(e) => setForm((f) => ({ ...f, tpm_limit: e.target.value }))}
+                      placeholder="Inherit"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-2 flex items-center justify-end gap-2">
