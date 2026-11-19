@@ -21,6 +21,7 @@ const PAGES = {
     title: 'Request logs',
     subtitle: 'Inspect individual gateway requests',
     Component: Logs,
+    fullWidth: true,
   },
   teams: {
     title: 'Teams',
@@ -47,6 +48,9 @@ const PAGES = {
 function Shell() {
   const [page, setPage] = React.useState('overview')
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  const [collapsed, setCollapsed] = React.useState(
+    () => localStorage.getItem('gw-sidebar-collapsed') === '1'
+  )
   const { pendingPage, clearPendingNavigate } = useAppStore()
 
   const current = PAGES[page] || PAGES.overview
@@ -55,6 +59,14 @@ function Shell() {
   const navigate = (id) => {
     setPage(id)
     setMobileOpen(false)
+  }
+
+  const toggleCollapse = () => {
+    setCollapsed((c) => {
+      const next = !c
+      localStorage.setItem('gw-sidebar-collapsed', next ? '1' : '0')
+      return next
+    })
   }
 
   // Lets any page ask the Shell to switch pages (e.g. "Test in playground").
@@ -73,14 +85,22 @@ function Shell() {
         onNavigate={navigate}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
       />
-      <div className="lg:pl-60">
+      <div className={collapsed ? 'lg:pl-16' : 'lg:pl-60'}>
         <Topbar
           title={current.title}
           subtitle={current.subtitle}
           onOpenMobile={() => setMobileOpen(true)}
         />
-        <main className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
+        <main
+          className={
+            current.fullWidth
+              ? 'w-full px-4 py-5 sm:px-6'
+              : 'mx-auto max-w-[1400px] px-4 py-5 sm:px-6'
+          }
+        >
           <Page />
         </main>
       </div>
