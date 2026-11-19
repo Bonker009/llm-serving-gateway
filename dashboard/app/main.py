@@ -29,6 +29,8 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
+from app.server_monitor import collect_server_stats
+
 # ---------------------------------------------------------------------------
 # Config (from environment)
 # ---------------------------------------------------------------------------
@@ -316,6 +318,14 @@ async def api_model_health(_: str = Depends(require_admin)):
     }
 
 
+@app.get("/api/server")
+async def api_server(_: str = Depends(require_admin)):
+    """Live host metrics: GPU (nvidia-smi), CPU/memory/swap, disks, top processes,
+    and logged-in users. Collected from the host via the mounts set in
+    docker-compose (see ``server_monitor.py``)."""
+    return await collect_server_stats()
+
+
 class TestRequest(BaseModel):
     model: str
     kind: str = "chat"  # "chat" | "embedding"
@@ -412,7 +422,7 @@ async def api_keys(_: str = Depends(require_admin)):
 
 
 class KeyCreate(BaseModel):
-    key_alias: str
+    key_alias: str | None = None  # optional — LiteLLM generates the token regardless
     team_id: str | None = None
     models: list[str] = []
     rpm_limit: int | None = None

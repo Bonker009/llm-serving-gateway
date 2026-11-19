@@ -89,6 +89,12 @@ export function getKeys() {
   return request('/api/keys')
 }
 
+// Live host metrics (GPU, CPU, memory, disk, processes, users). Reads the host
+// through mounts configured on the dashboard container; on demand only.
+export function getServerStats() {
+  return request('/api/server')
+}
+
 // Teams
 export function createTeam(body) {
   return post('/api/teams/create', body)

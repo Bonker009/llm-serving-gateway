@@ -146,6 +146,37 @@ export function successVsError(logs) {
   return { success, error, total: success + error }
 }
 
+// Per-team usage: requests, tokens, error count, and share of total requests.
+export function usageByTeam(logs, teams) {
+  const aliases = teamAliasMap(teams)
+  const map = new Map()
+  let totalReq = 0
+  for (const r of logs || []) {
+    const id = r.team_id != null ? String(r.team_id) : null
+    const label = id ? aliases.get(id) || id : '—'
+    const entry = map.get(label) || { team: label, requests: 0, tokens: 0, errors: 0 }
+    entry.requests += 1
+    if (typeof r.total_tokens === 'number') entry.tokens += r.total_tokens
+    if (!isSuccess(r)) entry.errors += 1
+    map.set(label, entry)
+    totalReq += 1
+  }
+  return [...map.values()]
+    .map((e) => ({ ...e, share: totalReq ? (e.requests / totalReq) * 100 : 0 }))
+    .sort((a, b) => b.requests - a.requests)
+}
+
+// Prompt vs completion token totals across the window.
+export function tokenSplit(logs) {
+  let prompt = 0
+  let completion = 0
+  for (const r of logs || []) {
+    if (typeof r.prompt_tokens === 'number') prompt += r.prompt_tokens
+    if (typeof r.completion_tokens === 'number') completion += r.completion_tokens
+  }
+  return { prompt, completion, total: prompt + completion }
+}
+
 export function usageByModel(logs) {
   const map = new Map()
   let totalReq = 0

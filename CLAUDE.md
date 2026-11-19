@@ -46,6 +46,16 @@ consequences:
   - `GET /api/models` → backend inventory from `/model/info`
     (`model_name, provider, model, api_base, host, port, tier, mode, source`).
   - `GET /api/model-health` → live per-backend health from `/health` (slow; on-demand).
+  - `GET /api/server` → **Server Monitor**: live HOST metrics. GPU via `nvidia-smi`
+    (util, memory, temp, power, clocks, PCIe, throttle reasons, ECC, encoder/decoder,
+    per-process); CPU (util + user/system/iowait/steal breakdown), memory/swap, network
+    I/O and disk I/O rates, top processes, uptime via `psutil`; disk capacity;
+    temperatures (lm-sensors, Linux); logged-in users. Collected in
+    `app/server_monitor.py` from read-only host mounts + the NVIDIA runtime on the
+    `dashboard` service in `docker-compose.yml`; rate-based readings share one short
+    sampling window. The SPA keeps a rolling in-memory history for trend sparklines.
+    Every section degrades gracefully (`available: false` / `[]`) when a tool or mount
+    is missing — no spend/cost.
   - `GET /api/keys` → virtual keys (masked token, team, models, limits).
   - `POST /api/test` → **playground**: real request through the gateway.
   - **Writes** (proxied to LiteLLM, master key server-side, Basic-auth guarded):

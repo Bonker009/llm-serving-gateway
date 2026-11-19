@@ -36,6 +36,49 @@ export function formatMs(n) {
   return `${Math.round(n)}ms`
 }
 
+// Bytes → human string (binary units, matching `df -h` / `free -h` intuition).
+export function formatBytes(bytes, digits = 1) {
+  if (bytes == null || Number.isNaN(bytes)) return '—'
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+  const i = Math.min(Math.floor(Math.log(Math.abs(bytes)) / Math.log(1024)), units.length - 1)
+  const val = bytes / Math.pow(1024, i)
+  const str = i === 0 ? String(bytes) : val.toFixed(val >= 100 ? 0 : digits)
+  return `${str} ${units[i]}`
+}
+
+// Megabytes → human string (nvidia-smi reports GPU memory in MB).
+export function formatMB(mb, digits = 1) {
+  if (mb == null || Number.isNaN(mb)) return '—'
+  return formatBytes(mb * 1024 * 1024, digits)
+}
+
+// Bytes/second → throughput string like "1.2 MB/s".
+export function formatRate(bytesPerSec, digits = 1) {
+  if (bytesPerSec == null || Number.isNaN(bytesPerSec)) return '—'
+  return `${formatBytes(bytesPerSec, digits)}/s`
+}
+
+// Operations/second (IOPS) → compact string like "1.2k IOPS".
+export function formatIops(n) {
+  if (n == null || Number.isNaN(n)) return '—'
+  return `${compactNumber(Math.round(n))} IOPS`
+}
+
+// Seconds → compact uptime like "3d 4h 12m".
+export function formatDuration(seconds) {
+  if (seconds == null || Number.isNaN(seconds)) return '—'
+  const s = Math.max(0, Math.floor(seconds))
+  const d = Math.floor(s / 86400)
+  const h = Math.floor((s % 86400) / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const parts = []
+  if (d) parts.push(`${d}d`)
+  if (h || d) parts.push(`${h}h`)
+  parts.push(`${m}m`)
+  return parts.join(' ')
+}
+
 export function formatDateTime(iso) {
   if (!iso) return '—'
   const d = new Date(iso)

@@ -1,6 +1,9 @@
 # Secrets — never commit
 .env
 
+# Local-only compose overrides (e.g. dropping GPU reservation on non-GPU hosts)
+docker-compose.override.yml
+
 # Provisioned key output
 *.keys.txt
 keys.out
@@ -9,6 +12,10 @@ keys.out
 dashboard/frontend/node_modules/
 dashboard/frontend/dist/
 dashboard/app/webdist/
+
+# Python bytecode
+__pycache__/
+*.pyc
 
 # OS / editor noise
 .DS_Store

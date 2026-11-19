@@ -1,11 +1,15 @@
 import * as React from 'react'
 import {
   LayoutDashboard,
+  BarChart3,
+  Radio,
   ScrollText,
+  HeartPulse,
   Users,
   KeyRound,
   Activity,
   Server,
+  Gauge,
   TerminalSquare,
   PanelLeftClose,
   PanelLeftOpen,
@@ -21,10 +25,14 @@ import {
 
 const NAV = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+  { id: 'activity', label: 'Live activity', icon: Radio },
   { id: 'logs', label: 'Request logs', icon: ScrollText },
+  { id: 'model-health', label: 'Model health', icon: HeartPulse },
   { id: 'teams', label: 'Teams', icon: Users },
   { id: 'keys', label: 'Keys', icon: KeyRound },
   { id: 'infrastructure', label: 'Infrastructure', icon: Server },
+  { id: 'server', label: 'Server monitor', icon: Gauge },
   { id: 'playground', label: 'Playground', icon: TerminalSquare },
 ]
 

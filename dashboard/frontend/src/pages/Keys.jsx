@@ -171,7 +171,8 @@ export function Keys() {
         <Card className="border-success/40 bg-success/10">
           <CardContent className="space-y-2 py-4">
             <p className="text-sm font-medium text-success">
-              Key "{revealKey.key_alias}" created — copy it now, it won't be shown again.
+              {revealKey.key_alias ? `Key "${revealKey.key_alias}" created` : 'Key created'} — copy
+              it now, it won't be shown again.
             </p>
             <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2">
               <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs text-foreground">

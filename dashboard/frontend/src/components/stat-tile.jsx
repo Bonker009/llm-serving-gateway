@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
-export function StatTile({ label, value, hint, icon: Icon, loading, tone }) {
+export function StatTile({ label, value, hint, icon: Icon, loading, tone, chart }) {
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between gap-2">
@@ -17,7 +17,9 @@ export function StatTile({ label, value, hint, icon: Icon, loading, tone }) {
                 ? 'text-success'
                 : tone === 'critical'
                   ? 'text-critical'
-                  : 'text-muted-foreground'
+                  : tone === 'warning'
+                    ? 'text-warning'
+                    : 'text-muted-foreground'
             )}
           />
         )}
@@ -34,6 +36,7 @@ export function StatTile({ label, value, hint, icon: Icon, loading, tone }) {
       {hint && !loading && (
         <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
       )}
+      {chart && !loading && <div className="mt-2">{chart}</div>}
     </Card>
   )
 }

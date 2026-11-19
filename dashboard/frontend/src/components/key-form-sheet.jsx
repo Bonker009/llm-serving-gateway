@@ -73,7 +73,7 @@ export function KeyFormSheet({ open, onOpenChange, keyRow, onCreated, onUpdated,
     setSaving(true)
     try {
       const body = {
-        key_alias: form.key_alias.trim(),
+        key_alias: form.key_alias.trim() || undefined,
         team_id: form.team_id === NO_TEAM ? undefined : form.team_id,
         models: form.models,
         rpm_limit: form.rpm_limit === '' ? undefined : Number(form.rpm_limit),
@@ -109,15 +109,18 @@ export function KeyFormSheet({ open, onOpenChange, keyRow, onCreated, onUpdated,
         <form className="flex flex-col gap-4 p-5" onSubmit={onSubmit}>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground" htmlFor="key-alias">
-              Key alias
+              Key alias (optional)
             </label>
             <Input
               id="key-alias"
-              required
               value={form.key_alias}
               onChange={(e) => setForm((f) => ({ ...f, key_alias: e.target.value }))}
-              placeholder="e.g. research-key"
+              placeholder="e.g. research-key — leave blank for an unnamed key"
             />
+            <p className="text-xs text-muted-foreground">
+              Naming helps you find the key later, but it isn’t required — the gateway still
+              generates the token.
+            </p>
           </div>
 
           <div className="space-y-1.5">
@@ -213,7 +216,7 @@ export function KeyFormSheet({ open, onOpenChange, keyRow, onCreated, onUpdated,
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving || !form.key_alias.trim()}>
+            <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {editing ? 'Save changes' : 'Create key'}
             </Button>

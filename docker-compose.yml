@@ -29,6 +29,27 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}  # stays server-side; never sent to the browser
       DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-admin}
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+      # --- Server Monitor: let the dashboard read the HOST, not just the container ---
+      HOST_PROC: "/host/proc"                    # psutil reads host CPU/mem/procs from here
+      HOST_ROOT: "/host/root"                    # host "/" for disk usage + utmp (users)
+      NVIDIA_VISIBLE_DEVICES: "all"              # expose all GPUs to nvidia-smi
+      NVIDIA_DRIVER_CAPABILITIES: "utility"      # inject the nvidia-smi binary + driver libs
+    volumes:
+      # Read-only host views for the Server Monitor page. On a Linux host these
+      # surface real GPU/CPU/disk/users; on a non-GPU dev box the page simply
+      # degrades to whatever is available.
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+    # GPU access (NVIDIA Container Toolkit). Harmless to leave configured on a box
+    # without GPUs — nvidia-smi is just absent and the GPU card shows "unavailable".
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     depends_on:
       - litellm
 

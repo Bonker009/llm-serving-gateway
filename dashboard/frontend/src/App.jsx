@@ -5,10 +5,14 @@ import { AppStoreProvider, useAppStore } from '@/components/app-store'
 import { Sidebar } from '@/components/sidebar'
 import { Topbar } from '@/components/topbar'
 import { Overview } from '@/pages/Overview'
+import { Analytics } from '@/pages/Analytics'
+import { Activity } from '@/pages/Activity'
 import { Logs } from '@/pages/Logs'
+import { ModelHealth } from '@/pages/ModelHealth'
 import { Teams } from '@/pages/Teams'
 import { Keys } from '@/pages/Keys'
 import { Infrastructure } from '@/pages/Infrastructure'
+import { ServerMonitor } from '@/pages/ServerMonitor'
 import { Playground } from '@/pages/Playground'
 
 const PAGES = {
@@ -17,10 +21,28 @@ const PAGES = {
     subtitle: 'Gateway traffic and health at a glance',
     Component: Overview,
   },
+  analytics: {
+    title: 'Analytics',
+    subtitle: 'Traffic, tokens, and latency broken down by model and team',
+    Component: Analytics,
+    fullWidth: true,
+  },
+  activity: {
+    title: 'Live activity',
+    subtitle: 'Recent gateway requests, streaming in near real time',
+    Component: Activity,
+    fullWidth: true,
+  },
   logs: {
     title: 'Request logs',
     subtitle: 'Inspect individual gateway requests',
     Component: Logs,
+    fullWidth: true,
+  },
+  'model-health': {
+    title: 'Model health',
+    subtitle: 'Live reachability and latency for each backend',
+    Component: ModelHealth,
     fullWidth: true,
   },
   teams: {
@@ -37,6 +59,12 @@ const PAGES = {
     title: 'Infrastructure',
     subtitle: 'Model backends, tiers, and team access',
     Component: Infrastructure,
+  },
+  server: {
+    title: 'Server monitor',
+    subtitle: 'Live host GPU, CPU, memory, disk, and sessions',
+    Component: ServerMonitor,
+    fullWidth: true,
   },
   playground: {
     title: 'Playground',
