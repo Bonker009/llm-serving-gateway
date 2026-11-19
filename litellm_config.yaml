@@ -1,0 +1,51 @@
+model_list:
+  # --- TIER 1: SHARED MULTI-TENANT MODELS ---
+  # Served by one shared Ollama instance (OLLAMA_NUM_PARALLEL handles concurrency).
+  - model_name: gemma4-12b
+    litellm_params:
+      model: ollama_chat/gemma4:12b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: bge-m3            # embeddings
+    litellm_params:
+      model: ollama/bge-m3
+      api_base: http://host.docker.internal:11434
+
+  - model_name: whisper-large-v3-turbo   # audio transcription (HRD Intelligence)
+    litellm_params:
+      model: openai/Systran/faster-whisper-large-v3-turbo
+      api_base: http://host.docker.internal:8001/v1
+      api_key: "local-no-key"
+
+  # --- TIER 2: DEDICATED PROJECT MODELS (vLLM / llama.cpp, OpenAI-compatible) ---
+  # Standardized on the hosted_vllm/ prefix for every self-hosted vLLM endpoint.
+  - model_name: reconix-qwen35b
+    litellm_params:
+      model: hosted_vllm/Qwen3.6-35B-A3B-Uncensored
+      api_base: http://host.docker.internal:8002/v1
+      api_key: "local-no-key"
+
+  - model_name: webblock-coder30b
+    litellm_params:
+      model: hosted_vllm/Qwen3-Coder-30B-A3B-Instruct
+      api_base: http://host.docker.internal:8003/v1
+      api_key: "local-no-key"
+
+  - model_name: camfinsight-qwen8b
+    litellm_params:
+      model: hosted_vllm/Qwen3-8B
+      api_base: http://host.docker.internal:8004/v1
+      api_key: "local-no-key"
+
+litellm_settings:
+  drop_params: true        # silently drop params a given backend doesn't support
+  num_retries: 2
+  request_timeout: 600     # generous: long generations + whisper transcription
+  # telemetry is off by default on self-hosted; left explicit for clarity
+  # set_verbose: true      # uncomment for debugging routing issues
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+  # Lets you add/edit models and manage keys from the Admin UI (persisted in Postgres).
+  store_model_in_db: true

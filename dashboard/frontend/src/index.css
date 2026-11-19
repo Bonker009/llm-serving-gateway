@@ -1,0 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme */
+    --background: 210 27% 96%;      /* #f4f6f9 */
+    --foreground: 222 28% 10%;      /* #121620 */
+    --card: 0 0% 100%;              /* #ffffff */
+    --card-foreground: 222 28% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 28% 10%;
+    --elevated: 213 25% 95%;        /* #eef1f5 */
+    --primary: 212 73% 48%;         /* #1f6fd6 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 213 25% 95%;
+    --secondary-foreground: 222 28% 10%;
+    --muted: 213 25% 95%;
+    --muted-foreground: 217 11% 40%; /* #5b6472 */
+    --accent: 212 73% 48%;
+    --accent-foreground: 0 0% 100%;
+    --border: 214 19% 89%;          /* #dde2e9 */
+    --input: 214 19% 89%;
+    --ring: 212 73% 48%;
+
+    --success: 157 82% 34%;         /* #0f9d6b */
+    --success-foreground: 0 0% 100%;
+    --warning: 34 80% 42%;          /* #c47d14 */
+    --warning-foreground: 0 0% 100%;
+    --critical: 2 68% 59%;          /* #dc5050 */
+    --critical-foreground: 0 0% 100%;
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    /* Dark theme */
+    --background: 218 18% 6%;        /* #0b0d11 */
+    --foreground: 220 24% 93%;       /* #e9ecf2 */
+    --card: 220 17% 9%;             /* #13161c */
+    --card-foreground: 220 24% 93%;
+    --popover: 220 17% 9%;
+    --popover-foreground: 220 24% 93%;
+    --elevated: 221 16% 13%;        /* #1a1e26 */
+    --primary: 209 100% 65%;        /* #4aa8ff */
+    --primary-foreground: 209 83% 7%; /* #06121f */
+    --secondary: 221 16% 13%;
+    --secondary-foreground: 220 24% 93%;
+    --muted: 221 16% 13%;
+    --muted-foreground: 217 11% 59%; /* #8a93a3 */
+    --accent: 209 100% 65%;
+    --accent-foreground: 209 83% 7%;
+    --border: 218 19% 18%;          /* #262c37 */
+    --input: 218 19% 18%;
+    --ring: 209 100% 65%;
+
+    --success: 157 64% 52%;         /* #34d399 */
+    --success-foreground: 209 83% 7%;
+    --warning: 43 96% 56%;          /* #fbbf24 */
+    --warning-foreground: 209 83% 7%;
+    --critical: 0 91% 71%;          /* #f87171 */
+    --critical-foreground: 209 83% 7%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

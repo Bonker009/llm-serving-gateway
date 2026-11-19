@@ -1,0 +1,52 @@
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    platform: linux/amd64
+    container_name: litellm-gateway
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    env_file:
+      - .env
+    extra_hosts:
+      # Lets the container reach Ollama/vLLM/Whisper running on the host.
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+
+  dashboard:
+    build: ./dashboard
+    container_name: litellm-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      LITELLM_BASE_URL: "http://litellm:4000"   # reach the gateway over the compose network
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}  # stays server-side; never sent to the browser
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-admin}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+    depends_on:
+      - litellm
+
+  litellm-db:
+    image: postgres:16-alpine
+    container_name: litellm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}   # MUST match the password in DATABASE_URL
+      POSTGRES_DB: litellm
+    volumes:
+      - litellm_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  litellm_pgdata:
