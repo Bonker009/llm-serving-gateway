@@ -157,15 +157,19 @@ Open `http://<host>:8080` and log in. Pages:
 | **Request logs** | Per-request log with search, status/model/team filters, an **Errors-only** lens, sortable columns, pagination, **CSV export**, auto-refresh, and a click-through detail drawer (full metadata, token breakdown, latency) |
 | **Infrastructure** | Backend **server instances grouped by host:port** — provider, domain, tier, the models each hosts and which teams use them; an on-demand **health check**; a model detail drawer with a **copy-as-curl** snippet; CSV/JSON export |
 | **Playground** | Pick a model, send a chat or embedding request through the gateway, see the response + latency + token usage (internal-dev test console) |
-| **Teams** | Each team's models and rpm/tpm limits, with a **per-team drill-down** (usage, success rate, recent requests) and CSV export |
+| **Teams** | Create / edit / delete teams (alias, model access, rpm/tpm) with a **per-team drill-down** (usage, success rate, recent requests) and CSV export |
+| **Keys** | Create / edit / **revoke** virtual keys (alias, team, models, limits); a created key is revealed **once** to copy |
 
-**Key management is intentionally not in the dashboard** — mint keys with
-`scripts/provision_keys.*` instead. The backend exposes read endpoints (`/api/health`,
-`/api/teams`, `/api/logs`, `/api/models`, `/api/model-health`) plus one convenience
-write — `POST /api/test` (the playground, which sends a real request via the
-server-side master key). Analytics are computed client-side from LiteLLM's
+The dashboard is a **full management console** — teams, virtual keys, and models all
+support create/update/delete. Reads: `/api/health`, `/api/teams`, `/api/logs`,
+`/api/models`, `/api/model-health`, `/api/keys`. Writes (proxied to LiteLLM with the
+server-side master key): `/api/teams/{create,update,delete}`,
+`/api/keys/{create,update,delete}`, `/api/models/{create,update,delete}`, plus the
+playground `POST /api/test`. Analytics are computed client-side from LiteLLM's
 `/team/list` and `/spend/logs` (the shared Postgres LiteLLM already writes to — no
-separate store).
+separate store). `scripts/provision_keys.*` still works for bulk/scripted provisioning.
+Models defined in `litellm_config.yaml` are read-only in the UI (edit the file);
+UI-created models live in Postgres (`store_model_in_db: true`).
 
 > **Note:** request logs appear only if LiteLLM is persisting them. It writes
 > spend logs to Postgres by default when `database_url` is set (it is). If your

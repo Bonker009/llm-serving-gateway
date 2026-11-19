@@ -13,13 +13,13 @@ Two halves, one image:
 
 ## Local-workspace rules (do not violate)
 - **No spend / cost / budget** anywhere. "Usage" means requests, tokens, latency.
-- **No API-key create/revoke** UI or endpoints.
-- Backend endpoints: `/api/health`, `/api/teams`, `/api/logs?days&limit`,
-  `/api/models`, `/api/model-health` (slow — on-demand), and `POST /api/test`
-  (playground — the only write, a real gateway call via the server-side master key).
-  The SPA computes all analytics client-side from the logs array (for the selected
-  range) + `/api/teams`.
-- Pages: Overview, Request logs, Infrastructure, Playground, Teams.
+- Full management console: teams, keys, and models support create/update/delete.
+  Destructive actions confirm first; a created key is revealed once.
+- Backend: reads `/api/health`, `/api/teams`, `/api/logs?days&limit`, `/api/models`,
+  `/api/model-health` (slow — on-demand), `/api/keys`; writes
+  `/api/{teams,keys,models}/{create,update,delete}`; plus `POST /api/test` (playground).
+  The SPA computes all analytics client-side from the logs array + `/api/teams`.
+- Pages: Overview, Request logs, Infrastructure, Playground, Teams, Keys.
 
 ## Frontend loop
 ```bash

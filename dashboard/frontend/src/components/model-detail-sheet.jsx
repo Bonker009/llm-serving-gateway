@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Check, Copy, TerminalSquare } from 'lucide-react'
+import { Check, Copy, TerminalSquare, Pencil, Trash2 } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -9,8 +9,11 @@ import {
 } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAppStore } from '@/components/app-store'
 import { buildCurl } from '@/lib/format'
+
+const CONFIG_LOCKED_TITLE = 'Defined in litellm_config.yaml — edit the file instead.'
 
 function Field({ label, children, mono }) {
   return (
@@ -61,11 +64,12 @@ function CopyCurlButton({ value }) {
 
 // `model` carries the shape returned by GET /api/models plus the optional
 // `teams` array computed by the caller (list of team aliases with access).
-export function ModelDetailSheet({ model, open, onOpenChange }) {
+export function ModelDetailSheet({ model, open, onOpenChange, onEdit, onDelete }) {
   const { setSelectedModel, requestNavigate } = useAppStore()
 
   const kind = model?.mode === 'embedding' ? 'embedding' : 'chat'
   const curl = model ? buildCurl({ model: model.model_name, kind }) : ''
+  const locked = model && model.source !== 'db'
 
   const onTestInPlayground = () => {
     if (!model) return
@@ -137,6 +141,51 @@ export function ModelDetailSheet({ model, open, onOpenChange }) {
                 <TerminalSquare className="h-4 w-4" />
                 Test in playground
               </Button>
+
+              {onEdit && onDelete && (
+                <div className="flex items-center gap-2">
+                  {locked ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="flex-1">
+                          <Button variant="outline" className="w-full" disabled>
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{CONFIG_LOCKED_TITLE}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button variant="outline" className="flex-1" onClick={() => onEdit(model)}>
+                      <Pencil className="h-4 w-4" />
+                      Edit
+                    </Button>
+                  )}
+                  {locked ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="flex-1">
+                          <Button variant="outline" className="w-full text-critical" disabled>
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{CONFIG_LOCKED_TITLE}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-critical hover:text-critical"
+                      onClick={() => onDelete(model)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </>
         )}

@@ -13,11 +13,10 @@ management API.
   never reach the browser or appear in any response/log.
 - **Every route is behind HTTP Basic auth** via `require_admin`. New routes get the
   `_: str = Depends(require_admin)` guard, including static/asset routes.
-- Backend is **observability-first** for this local workspace: **no**
-  spend/cost/budget computation and **no** key create/revoke endpoints. The only
-  non-read route is `POST /api/test` (playground) — it makes a real gateway call with
-  the master key; keep it capped and auth-guarded, and don't broaden it into key/config
-  mutation.
+- Full management for this local workspace: reads **plus** teams/keys/models CRUD and
+  the `POST /api/test` playground. Still **no** spend/cost/budget. Reads use
+  `litellm_safe()`; writes use `litellm()` (surface upstream errors). Keep writes scoped
+  to teams/keys/models — don't add cost/budget or anything that leaks the master key.
 - Use `litellm()` (raises) for required calls and `litellm_safe()` (returns None) for
   optional upstreams. Normalize LiteLLM responses into stable, frontend-friendly
   shapes; tolerate missing fields.
@@ -33,8 +32,15 @@ management API.
   host, port, tier, mode, source}]` (tier derived from port; shared-first sort).
 - `GET /api/model-health` → from `/health` (slow, on-demand): `{reachable, healthy[],
   unhealthy[]}` each `{model, api_base, latency_ms, error}`.
+- `GET /api/keys` → `[{token, key_name, key_alias, team_id, models[], rpm_limit,
+  tpm_limit, created_at, expires}]` (from `/key/list`, `size≤100`).
 - `POST /api/test` → playground; `{model, kind, prompt, max_tokens}` →
   `{ok, latency_ms, text, usage, raw, error}` via `/chat/completions` or `/embeddings`.
+- Writes → LiteLLM: `/api/teams/{create→/team/new, update→/team/update,
+  delete→/team/delete}`, `/api/keys/{create→/key/generate, update→/key/update,
+  delete→/key/delete}`, `/api/models/{create→/model/new, update→/model/update,
+  delete→/model/delete}`. `/api/models` carries `id` (from `model_info.id`) for
+  update/delete; config-sourced models aren't editable via the API.
 - SPA serving: `GET /` → `app/webdist/index.html`; `GET /assets/{path}` → files under
   `app/webdist/assets` (path-traversal guarded, auth-guarded). The SPA is produced by
   the Vite build and copied in by the Docker frontend stage.

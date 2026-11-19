@@ -17,13 +17,18 @@ You build and maintain the LiteLLM gateway admin SPA in `dashboard/frontend/`.
 
 ## Hard rules (local workspace)
 - **No spend, cost, or budget** anywhere. "Usage" = requests / tokens / latency.
-- **No API-key create/revoke UI.** The dashboard is read-only observability.
-- Backend endpoints: `/api/health`, `/api/teams`, `/api/logs?days&limit`,
-  `/api/models`, `/api/model-health` (slow — on-demand only), and `POST /api/test`
-  (playground). Analytics (tiles/charts) are computed **client-side** in
-  `lib/analytics.js` from the logs array for the selected range + `/api/teams`. Do not
-  invent endpoints — if new data is truly needed, flag it for the `gateway-backend`
-  agent.
+- This is a **full management console**: teams, virtual keys, and models all support
+  create / update / delete through the backend. Destructive actions confirm first;
+  a newly created key is shown **once** (copy-to-clipboard) and never again.
+- Backend endpoints — reads: `/api/health`, `/api/teams`, `/api/logs?days&limit`,
+  `/api/models`, `/api/model-health` (slow — on-demand only), `/api/keys`; writes:
+  `/api/teams/{create,update,delete}`, `/api/keys/{create,update,delete}`,
+  `/api/models/{create,update,delete}`; plus `POST /api/test` (playground). Analytics
+  (tiles/charts) are computed **client-side** in `lib/analytics.js` from the logs array
+  for the selected range + `/api/teams`. Do not invent endpoints — if new data is truly
+  needed, flag it for the `gateway-backend` agent.
+- After a mutation, refetch the affected list (`refetch` from the store for
+  teams/models; local reload for keys) so the UI reflects the change.
 - Pages: Overview, Request logs (with an Errors-only lens), Teams (with per-team
   drill-down), Infrastructure (servers grouped by host:port + on-demand health + model
   detail/copy-as-curl), and Playground. CSV/JSON export lives in `lib/format.js`

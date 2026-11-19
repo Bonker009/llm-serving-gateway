@@ -7,6 +7,7 @@ import { Topbar } from '@/components/topbar'
 import { Overview } from '@/pages/Overview'
 import { Logs } from '@/pages/Logs'
 import { Teams } from '@/pages/Teams'
+import { Keys } from '@/pages/Keys'
 import { Infrastructure } from '@/pages/Infrastructure'
 import { Playground } from '@/pages/Playground'
 
@@ -25,6 +26,11 @@ const PAGES = {
     title: 'Teams',
     subtitle: 'Provisioned teams and their limits',
     Component: Teams,
+  },
+  keys: {
+    title: 'Keys',
+    subtitle: 'Provisioned virtual keys and their scopes',
+    Component: Keys,
   },
   infrastructure: {
     title: 'Infrastructure',

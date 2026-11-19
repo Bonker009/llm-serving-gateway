@@ -1,14 +1,16 @@
 ---
 name: provision-team
-description: Create a team and its scoped virtual API key on the LiteLLM gateway using scripts/provision_keys.sh or .ps1. Use when asked to onboard a project, mint a virtual key, set a team's model allow-list or rpm/tpm limits. This is the ONLY supported way to create keys — the dashboard has no key UI.
+description: Create a team and its scoped virtual API key on the LiteLLM gateway — either in bulk via scripts/provision_keys.sh/.ps1, or one at a time in the dashboard UI (Teams/Keys pages). Use when asked to onboard a project, mint a virtual key, or set a team's model allow-list or rpm/tpm limits.
 ---
 
 # Provision a team + virtual key
 
-Keys are minted out-of-band with `scripts/provision_keys.sh` (bash+curl+jq) or
-`scripts/provision_keys.ps1` (PowerShell). Each run creates, per project: a **team**
-scoped to an allowed model list, and a **virtual key** under that team with rpm/tpm
-limits. The dashboard is intentionally read-only and does **not** mint keys.
+Two paths:
+- **Dashboard UI** — the Teams and Keys pages (`:8080`) create/edit/delete teams and
+  keys interactively; a new key is revealed once to copy. Best for one-off changes.
+- **Bulk script** — `scripts/provision_keys.sh` (bash+curl+jq) or `.ps1` (PowerShell)
+  onboards several projects at once. Each run creates, per project: a **team** scoped to
+  an allowed model list, and a **virtual key** under that team with rpm/tpm limits.
 
 ## Run it
 ```bash
@@ -30,10 +32,10 @@ limits, edit its entry. Model names must already exist in `litellm_config.yaml` 
 the `gateway-models` skill).
 
 ## Output & safety
-- Keys are written to `provisioned.keys.txt` (gitignored) — **distribute securely and
-  delete**. Never paste a real `sk-...` key or the master key into chat, commits, or
-  tool output.
-- Verify afterward in the dashboard Teams tab (http://localhost:8080) or via
+- Script keys are written to `provisioned.keys.txt` (gitignored) — **distribute
+  securely and delete**. Never paste a real `sk-...` key or the master key into chat,
+  commits, or tool output.
+- Verify afterward in the dashboard Teams/Keys pages (http://localhost:8080) or via
   `/team/list` on the gateway.
-- Re-running creates additional teams/keys; it is not idempotent — check existing
-  teams first if you only meant to tweak one.
+- The script is not idempotent (re-running creates more teams/keys); for single
+  tweaks prefer the UI edit buttons or check existing teams first.

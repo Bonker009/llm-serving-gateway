@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   ScrollText,
   Users,
+  KeyRound,
   Activity,
   Server,
   TerminalSquare,
@@ -15,6 +16,7 @@ const NAV = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'logs', label: 'Request logs', icon: ScrollText },
   { id: 'teams', label: 'Teams', icon: Users },
+  { id: 'keys', label: 'Keys', icon: KeyRound },
   { id: 'infrastructure', label: 'Infrastructure', icon: Server },
   { id: 'playground', label: 'Playground', icon: TerminalSquare },
 ]

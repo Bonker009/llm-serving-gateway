@@ -1,9 +1,15 @@
 import * as React from 'react'
-import { Download, Users } from 'lucide-react'
+import { Download, Users, Plus, MoreHorizontal, Pencil, Trash2, Eye } from 'lucide-react'
 import { useAppStore } from '@/components/app-store'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -15,6 +21,10 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
 import { TeamDetailSheet } from '@/components/team-detail-sheet'
+import { TeamFormSheet } from '@/components/team-form-sheet'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { Banner } from '@/components/banner'
+import { deleteTeam } from '@/lib/api'
 import { formatNumber, toCSV, downloadCSV } from '@/lib/format'
 
 const CSV_COLUMNS = [
@@ -26,10 +36,18 @@ const CSV_COLUMNS = [
 ]
 
 export function Teams() {
-  const { teams, logs, loading, error } = useAppStore()
+  const { teams, logs, loading, error, refetch } = useAppStore()
 
   const [selected, setSelected] = React.useState(null)
   const [sheetOpen, setSheetOpen] = React.useState(false)
+
+  const [formOpen, setFormOpen] = React.useState(false)
+  const [editingTeam, setEditingTeam] = React.useState(null)
+
+  const [deleteTarget, setDeleteTarget] = React.useState(null)
+  const [deleting, setDeleting] = React.useState(false)
+
+  const [banner, setBanner] = React.useState(null)
 
   const openTeam = (t) => {
     setSelected(t)
@@ -38,6 +56,41 @@ export function Teams() {
 
   const onExport = () => {
     downloadCSV('gateway-teams.csv', toCSV(teams, CSV_COLUMNS))
+  }
+
+  const openCreate = () => {
+    setEditingTeam(null)
+    setFormOpen(true)
+  }
+  const openEdit = (t) => {
+    setEditingTeam(t)
+    setFormOpen(true)
+  }
+
+  const onFormSuccess = (message) => {
+    setBanner({ type: 'success', message })
+    refetch()
+  }
+  const onFormError = (message) => {
+    setBanner({ type: 'error', message })
+  }
+
+  const onConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteTeam({ team_ids: [deleteTarget.team_id] })
+      setBanner({
+        type: 'success',
+        message: `Deleted team "${deleteTarget.team_alias || deleteTarget.team_id}".`,
+      })
+      setDeleteTarget(null)
+      refetch()
+    } catch (err) {
+      setBanner({ type: 'error', message: err.message || 'Failed to delete team.' })
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -50,7 +103,13 @@ export function Teams() {
         </Card>
       )}
 
-      <div className="flex items-center justify-end">
+      <Banner
+        type={banner?.type}
+        message={banner?.message}
+        onDismiss={() => setBanner(null)}
+      />
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
           variant="outline"
           size="sm"
@@ -60,6 +119,10 @@ export function Teams() {
         >
           <Download className="h-4 w-4" />
           Export CSV
+        </Button>
+        <Button size="sm" className="h-9" onClick={openCreate}>
+          <Plus className="h-4 w-4" />
+          New team
         </Button>
       </div>
 
@@ -74,8 +137,8 @@ export function Teams() {
           ) : teams.length === 0 ? (
             <EmptyState
               icon={Users}
-              title="No teams yet — run the provisioning script."
-              description="Teams and their scoped keys are created via scripts/provision_keys."
+              title="No teams yet — create one to get started."
+              description="Teams scope which models and rate limits a group of keys can use."
             />
           ) : (
             <Table>
@@ -86,6 +149,7 @@ export function Teams() {
                   <TableHead>Models</TableHead>
                   <TableHead className="text-right">RPM</TableHead>
                   <TableHead className="text-right">TPM</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -127,6 +191,36 @@ export function Teams() {
                     <TableCell className="tabular text-right font-mono">
                       {t.tpm_limit == null ? '—' : formatNumber(t.tpm_limit)}
                     </TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Actions for ${t.team_alias || t.team_id}`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openTeam(t)}>
+                            <Eye className="h-4 w-4" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEdit(t)}>
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-critical focus:text-critical"
+                            onClick={() => setDeleteTarget(t)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -140,6 +234,28 @@ export function Teams() {
         logs={logs}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      <TeamFormSheet
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        team={editingTeam}
+        onSuccess={onFormSuccess}
+        onError={onFormError}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+        title="Delete this team?"
+        description={
+          deleteTarget
+            ? `This permanently deletes "${deleteTarget.team_alias || deleteTarget.team_id}". Keys scoped to this team may stop working.`
+            : ''
+        }
+        confirmLabel="Delete team"
+        busy={deleting}
+        onConfirm={onConfirmDelete}
       />
     </div>
   )

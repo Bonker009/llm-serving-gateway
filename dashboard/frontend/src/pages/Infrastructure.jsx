@@ -3,12 +3,16 @@ import {
   Server,
   RefreshCw,
   Download,
+  Plus,
+  Pencil,
+  Trash2,
+  MoreHorizontal,
   CircleCheck,
   CircleX,
   CircleDashed,
 } from 'lucide-react'
 import { useAppStore } from '@/components/app-store'
-import { getModelHealth } from '@/lib/api'
+import { getModelHealth, deleteModel } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Table,
   TableBody,
@@ -29,9 +34,14 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/empty-state'
 import { ModelDetailSheet } from '@/components/model-detail-sheet'
+import { ModelFormSheet } from '@/components/model-form-sheet'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { Banner } from '@/components/banner'
 import { teamAliasMap } from '@/lib/analytics'
 import { formatMs, toCSV, downloadCSV, downloadJSON } from '@/lib/format'
 import { cn } from '@/lib/utils'
+
+const CONFIG_LOCKED_TITLE = 'Defined in litellm_config.yaml — edit the file instead.'
 
 const CSV_COLUMNS = [
   { label: 'model_name', get: (m) => m.model_name },
@@ -81,7 +91,7 @@ function StatusDot({ state }) {
 }
 
 export function Infrastructure() {
-  const { models, teams, loading, error } = useAppStore()
+  const { models, teams, loading, error, refetch } = useAppStore()
 
   const [health, setHealth] = React.useState(null)
   const [healthLoading, setHealthLoading] = React.useState(false)
@@ -89,6 +99,14 @@ export function Infrastructure() {
 
   const [selected, setSelected] = React.useState(null)
   const [sheetOpen, setSheetOpen] = React.useState(false)
+
+  const [formOpen, setFormOpen] = React.useState(false)
+  const [editingModel, setEditingModel] = React.useState(null)
+
+  const [deleteTarget, setDeleteTarget] = React.useState(null)
+  const [deleting, setDeleting] = React.useState(false)
+
+  const [banner, setBanner] = React.useState(null)
 
   const aliases = React.useMemo(() => teamAliasMap(teams), [teams])
 
@@ -164,6 +182,40 @@ export function Infrastructure() {
     downloadJSON('gateway-models.json', models)
   }
 
+  const openCreateModel = () => {
+    setEditingModel(null)
+    setFormOpen(true)
+  }
+  const openEditModel = (m) => {
+    if (m.source !== 'db') return
+    setEditingModel(m)
+    setFormOpen(true)
+  }
+
+  const onFormSuccess = (message) => {
+    setBanner({ type: 'success', message })
+    refetch()
+  }
+  const onFormError = (message) => {
+    setBanner({ type: 'error', message })
+  }
+
+  const onConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteModel({ id: deleteTarget.id })
+      setBanner({ type: 'success', message: `Deleted model "${deleteTarget.model_name}".` })
+      setDeleteTarget(null)
+      setSheetOpen(false)
+      refetch()
+    } catch (err) {
+      setBanner({ type: 'error', message: err.message || 'Failed to delete model.' })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const hasModels = (models || []).length > 0
 
   return (
@@ -175,6 +227,8 @@ export function Infrastructure() {
           </CardContent>
         </Card>
       )}
+
+      <Banner type={banner?.type} message={banner?.message} onDismiss={() => setBanner(null)} />
 
       {/* Header actions */}
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -201,6 +255,11 @@ export function Infrastructure() {
             <DropdownMenuItem onClick={onExportJSON}>Export JSON</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Button size="sm" className="h-9" onClick={openCreateModel}>
+          <Plus className="h-4 w-4" />
+          Add model
+        </Button>
       </div>
 
       {loading ? (
@@ -307,12 +366,14 @@ export function Infrastructure() {
                     <TableHead>Tier</TableHead>
                     <TableHead className="text-right">Teams</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {models.map((m) => {
                     const st = statusFor(m)
                     const teamCount = teamsForModel(m.model_name, teams, aliases).length
+                    const locked = m.source !== 'db'
                     return (
                       <TableRow
                         key={m.model_name}
@@ -347,6 +408,50 @@ export function Infrastructure() {
                             {st.state === 'unknown' ? 'unknown' : `${st.state} · ${formatMs(st.latency_ms)}`}
                           </span>
                         </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          {locked ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    disabled
+                                    aria-label={`Actions for ${m.model_name} (locked)`}
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>{CONFIG_LOCKED_TITLE}</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={`Actions for ${m.model_name}`}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEditModel(m)}>
+                                  <Pencil className="h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-critical focus:text-critical"
+                                  onClick={() => setDeleteTarget(m)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </TableCell>
                       </TableRow>
                     )
                   })}
@@ -357,7 +462,38 @@ export function Infrastructure() {
         </>
       )}
 
-      <ModelDetailSheet model={selected} open={sheetOpen} onOpenChange={setSheetOpen} />
+      <ModelDetailSheet
+        model={selected}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onEdit={(m) => {
+          setSheetOpen(false)
+          openEditModel(m)
+        }}
+        onDelete={(m) => setDeleteTarget(m)}
+      />
+
+      <ModelFormSheet
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        model={editingModel}
+        onSuccess={onFormSuccess}
+        onError={onFormError}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+        title="Delete this model?"
+        description={
+          deleteTarget
+            ? `This permanently removes "${deleteTarget.model_name}" from the gateway. Teams/keys that reference it will fail until updated.`
+            : ''
+        }
+        confirmLabel="Delete model"
+        busy={deleting}
+        onConfirm={onConfirmDelete}
+      />
     </div>
   )
 }

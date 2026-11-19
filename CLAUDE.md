@@ -15,9 +15,11 @@ consequences:
 - **No spend / cost / budget** anywhere in the dashboard. Do not add spend columns,
   budget fields, or cost math. If asked for "usage", mean **requests, tokens,
   latency** — never dollars.
-- **No API-key management in the dashboard UI.** Keys are provisioned out-of-band
-  with `scripts/provision_keys.*`. The dashboard is **read-only / observability**.
-  Do not add key create/revoke endpoints or UI.
+- The dashboard is a **full management console**: teams, virtual keys, and models all
+  support create / update / delete (proxied to the LiteLLM mgmt API with the
+  server-side master key). The `scripts/provision_keys.*` scripts still work for bulk
+  provisioning, but the UI can now do it too. Destructive actions confirm first; a
+  created key is revealed **once**.
 
 ## Layout
 
@@ -28,7 +30,7 @@ consequences:
 | `.env` / `.env.example` | Secrets (gitignored real `.env`) |
 | `scripts/provision_keys.{sh,ps1}` | Create a team + virtual key per project |
 | `systemd/` | Host-side Ollama tuning |
-| `dashboard/app/main.py` | FastAPI: HTTP Basic auth + read-only proxy over the LiteLLM mgmt API + serves the SPA |
+| `dashboard/app/main.py` | FastAPI: HTTP Basic auth + proxy over the LiteLLM mgmt API (reads + teams/keys/models management) + serves the SPA |
 | `dashboard/frontend/` | React + Vite + Tailwind + shadcn/ui SPA (the admin UI) |
 | `dashboard/Dockerfile` | Multi-stage: Node builds the SPA → Python serves `app/webdist` |
 
@@ -44,10 +46,12 @@ consequences:
   - `GET /api/models` → backend inventory from `/model/info`
     (`model_name, provider, model, api_base, host, port, tier, mode, source`).
   - `GET /api/model-health` → live per-backend health from `/health` (slow; on-demand).
-  - `POST /api/test` → **playground**: sends a real request through the gateway with
-    the master key (`{model, kind, prompt, max_tokens}` → `{ok, latency_ms, text,
-    usage, raw}`). The one non-read endpoint — internal-dev convenience, capped tokens,
-    still behind Basic auth; no key ever reaches the browser.
+  - `GET /api/keys` → virtual keys (masked token, team, models, limits).
+  - `POST /api/test` → **playground**: real request through the gateway.
+  - **Writes** (proxied to LiteLLM, master key server-side, Basic-auth guarded):
+    `POST /api/teams/{create,update,delete}`, `/api/keys/{create,update,delete}`,
+    `/api/models/{create,update,delete}`. No key value ever reaches the browser except
+    the one-time reveal returned by `keys/create`.
 - **Frontend** (`dashboard/frontend/`): Vite builds to `dist/`; the Docker frontend
   stage copies it to `app/webdist`. FastAPI serves `webdist/index.html` at `/` and
   `webdist/assets/*` at `/assets/*` (both auth-guarded). The SPA talks to `/api/*`
@@ -82,13 +86,15 @@ Models are reachable from the container via `host.docker.internal`. Keep the REA
 model-map table in sync.
 
 ### Provision a team + key
-`scripts/provision_keys.sh` (or `.ps1`) — needs `LITELLM_MASTER_KEY`. This is the
-**only** supported way to mint keys; the dashboard does not.
+Two ways: the **dashboard UI** (Teams / Keys pages → create), or
+`scripts/provision_keys.sh` (or `.ps1`) for bulk/scripted setup (needs
+`LITELLM_MASTER_KEY`).
 
 ## Conventions
 
-- Backend: keep it a **read-only proxy**; never expose the master key; guard every
-  route with `require_admin`; use `litellm_safe()` for optional upstreams.
+- Backend: a proxy over the LiteLLM mgmt API — reads via `litellm_safe()`, writes via
+  `litellm()`; **never expose the master key**; guard every route with `require_admin`.
+  Writes stay scoped to teams/keys/models management — no spend/budget surfaces.
 - Frontend: JavaScript + JSX (no TypeScript); numbers use tabular-nums; mono font for
   IDs/models/tokens; design both light & dark themes; status colors (success/warn/
   critical) are reserved and separate from the azure accent.

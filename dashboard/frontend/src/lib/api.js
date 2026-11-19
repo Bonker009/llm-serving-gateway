@@ -27,6 +27,41 @@ async function request(path) {
   }
 }
 
+// Shared JSON POST helper for all write/management endpoints.
+async function post(path, body) {
+  let res
+  try {
+    res = await fetch(path, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(body || {}),
+    })
+  } catch (err) {
+    throw new Error('Network error — could not reach the backend.')
+  }
+
+  if (res.status === 401) {
+    throw new Error('Unauthorized (401). Your session may have expired.')
+  }
+  if (!res.ok) {
+    let detail = ''
+    try {
+      const data = await res.json()
+      detail = data?.detail || data?.message || ''
+    } catch (e) {
+      /* ignore malformed error body */
+    }
+    throw new Error(detail || `Request failed (${res.status} ${res.statusText}).`)
+  }
+
+  try {
+    return await res.json()
+  } catch (err) {
+    return null
+  }
+}
+
 export function getHealth() {
   return request('/api/health')
 }
@@ -48,6 +83,43 @@ export function getModels() {
 // global fetch loop.
 export function getModelHealth() {
   return request('/api/model-health')
+}
+
+export function getKeys() {
+  return request('/api/keys')
+}
+
+// Teams
+export function createTeam(body) {
+  return post('/api/teams/create', body)
+}
+export function updateTeam(body) {
+  return post('/api/teams/update', body)
+}
+export function deleteTeam(body) {
+  return post('/api/teams/delete', body)
+}
+
+// Keys
+export function createKey(body) {
+  return post('/api/keys/create', body)
+}
+export function updateKey(body) {
+  return post('/api/keys/update', body)
+}
+export function deleteKey(body) {
+  return post('/api/keys/delete', body)
+}
+
+// Models
+export function createModel(body) {
+  return post('/api/models/create', body)
+}
+export function updateModel(body) {
+  return post('/api/models/update', body)
+}
+export function deleteModel(body) {
+  return post('/api/models/delete', body)
 }
 
 export async function runTest(body) {

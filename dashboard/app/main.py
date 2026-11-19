@@ -232,6 +232,7 @@ async def api_models(_: str = Depends(require_admin)):
         host, port = _host_port(api_base)
         out.append(
             {
+                "id": info.get("id"),
                 "model_name": m.get("model_name"),
                 "provider": provider,
                 "model": raw_model,
@@ -335,6 +336,174 @@ async def api_test(body: TestRequest, _: str = Depends(require_admin)):
         "usage": result.get("usage"),
         "raw": result,
     }
+
+
+# ---------------------------------------------------------------------------
+# Management (write) endpoints — proxied to the LiteLLM management API.
+# All writes use the server-side master key; the browser never sees it.
+# ---------------------------------------------------------------------------
+def _clean(d: dict) -> dict:
+    """Drop None / empty-string / empty-list values so we only send set fields."""
+    return {k: v for k, v in d.items() if v not in (None, "", [])}
+
+
+# ---- Keys -----------------------------------------------------------------
+@app.get("/api/keys")
+async def api_keys(_: str = Depends(require_admin)):
+    raw = await litellm_safe(
+        "GET", "/key/list", params={"return_full_object": "true", "page": 1, "size": 100}
+    )
+    keys = raw.get("keys", []) if isinstance(raw, dict) else (raw or [])
+    out = []
+    for k in keys or []:
+        if isinstance(k, str):
+            out.append({"token": k, "key_alias": None})
+            continue
+        out.append(
+            {
+                "token": k.get("token"),
+                "key_name": k.get("key_name"),
+                "key_alias": k.get("key_alias"),
+                "team_id": k.get("team_id"),
+                "models": k.get("models") or [],
+                "rpm_limit": k.get("rpm_limit"),
+                "tpm_limit": k.get("tpm_limit"),
+                "created_at": k.get("created_at"),
+                "expires": k.get("expires"),
+            }
+        )
+    return out
+
+
+class KeyCreate(BaseModel):
+    key_alias: str
+    team_id: str | None = None
+    models: list[str] = []
+    rpm_limit: int | None = None
+    tpm_limit: int | None = None
+
+
+@app.post("/api/keys/create")
+async def api_key_create(body: KeyCreate, _: str = Depends(require_admin)):
+    result = await litellm("POST", "/key/generate", json=_clean(body.model_dump()))
+    return {"key": result.get("key"), "key_alias": result.get("key_alias")}
+
+
+class KeyUpdate(BaseModel):
+    key: str  # the hashed token from /api/keys
+    key_alias: str | None = None
+    team_id: str | None = None
+    models: list[str] | None = None
+    rpm_limit: int | None = None
+    tpm_limit: int | None = None
+
+
+@app.post("/api/keys/update")
+async def api_key_update(body: KeyUpdate, _: str = Depends(require_admin)):
+    payload = {k: v for k, v in body.model_dump().items() if v is not None}
+    return await litellm("POST", "/key/update", json=payload)
+
+
+class KeyDelete(BaseModel):
+    keys: list[str]
+
+
+@app.post("/api/keys/delete")
+async def api_key_delete(body: KeyDelete, _: str = Depends(require_admin)):
+    result = await litellm("POST", "/key/delete", json={"keys": body.keys})
+    return result or {"deleted": body.keys}
+
+
+# ---- Teams ----------------------------------------------------------------
+class TeamCreate(BaseModel):
+    team_alias: str
+    models: list[str] = []
+    rpm_limit: int | None = None
+    tpm_limit: int | None = None
+
+
+@app.post("/api/teams/create")
+async def api_team_create(body: TeamCreate, _: str = Depends(require_admin)):
+    return await litellm("POST", "/team/new", json=_clean(body.model_dump()))
+
+
+class TeamUpdate(BaseModel):
+    team_id: str
+    team_alias: str | None = None
+    models: list[str] | None = None
+    rpm_limit: int | None = None
+    tpm_limit: int | None = None
+
+
+@app.post("/api/teams/update")
+async def api_team_update(body: TeamUpdate, _: str = Depends(require_admin)):
+    payload = {k: v for k, v in body.model_dump().items() if v is not None}
+    return await litellm("POST", "/team/update", json=payload)
+
+
+class TeamDelete(BaseModel):
+    team_ids: list[str]
+
+
+@app.post("/api/teams/delete")
+async def api_team_delete(body: TeamDelete, _: str = Depends(require_admin)):
+    return await litellm("POST", "/team/delete", json={"team_ids": body.team_ids})
+
+
+# ---- Models ---------------------------------------------------------------
+class ModelCreate(BaseModel):
+    model_name: str
+    model: str  # provider-prefixed, e.g. "hosted_vllm/Qwen3-8B"
+    api_base: str | None = None
+    api_key: str | None = None
+
+
+def _model_params(body: "ModelCreate | ModelUpdate") -> dict:
+    params = {"model": body.model}
+    if body.api_base:
+        params["api_base"] = body.api_base
+    if body.api_key:
+        params["api_key"] = body.api_key
+    return params
+
+
+@app.post("/api/models/create")
+async def api_model_create(body: ModelCreate, _: str = Depends(require_admin)):
+    return await litellm(
+        "POST",
+        "/model/new",
+        json={"model_name": body.model_name, "litellm_params": _model_params(body)},
+    )
+
+
+class ModelUpdate(BaseModel):
+    id: str
+    model_name: str
+    model: str
+    api_base: str | None = None
+    api_key: str | None = None
+
+
+@app.post("/api/models/update")
+async def api_model_update(body: ModelUpdate, _: str = Depends(require_admin)):
+    return await litellm(
+        "POST",
+        "/model/update",
+        json={
+            "model_name": body.model_name,
+            "litellm_params": _model_params(body),
+            "model_info": {"id": body.id},
+        },
+    )
+
+
+class ModelDelete(BaseModel):
+    id: str
+
+
+@app.post("/api/models/delete")
+async def api_model_delete(body: ModelDelete, _: str = Depends(require_admin)):
+    return await litellm("POST", "/model/delete", json={"id": body.id})
 
 
 # ---------------------------------------------------------------------------
